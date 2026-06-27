@@ -1,3 +1,12 @@
+import pygame
+
+class Texture:
+    def __init__(self, background:pygame.Surface, x_texture:pygame.Surface, o_texture:pygame.Surface) -> None:
+        self.x_texture = x_texture
+        self.o_texture = o_texture
+        self.background = background
+        pass
+
 class Rect:
     def __init__(self, x, y, width, height) -> None:
         self.x, self.y, self.width, self.height = x, y, width, height
@@ -10,7 +19,7 @@ class Rect:
         return self.x < dx <= self.x + self.width and self.y < dy <= self.y + self.height
     
 class NonagonTree:
-    def __init__(self, id:list[int], rect:Rect, steps:int = 0) -> None:
+    def __init__(self, id:list[int], rect:Rect, steps:int, texture:Texture) -> None:
         self.rect = rect
         self.steps = steps
         x, y, width, height = self.rect.get_values()
@@ -20,9 +29,9 @@ class NonagonTree:
                 lower_id = id.copy()
                 lower_id.append(j*3+i)
                 if steps == 0:
-                    self.grid[j].append(Space(lower_id, Rect(x + i*width/3, y+j*height/3, width/3, height/3), 0))
+                    self.grid[j].append(Space(lower_id, Rect(x + i*width/3, y+j*height/3, width/3, height/3), 0, texture))
                 else:
-                    self.grid[j].append(NonagonTree(lower_id, Rect(x + i*width/3, y+j*height/3, width/3, height/3), steps - 1))
+                    self.grid[j].append(NonagonTree(lower_id, Rect(x + i*width/3, y+j*height/3, width/3, height/3), steps - 1, texture))
 
         self.winner = 0
 
@@ -62,18 +71,21 @@ class NonagonTree:
                     temp_list += grid_slot.to_list()
         return temp_list
     
-    def draw(self):
+    def draw(self, surface:pygame.Surface):
         # Draw tictactoe grid
         for j in range(len(self.grid)):
             for i in range(len(self.grid[j])):
-                self.grid[j][i].draw()
+                self.grid[j][i].draw(surface)
         # if self.winner = 0: no winner, 1: x wins, 2: o wins
 
 class Space:
-    def __init__(self, id:list[int], rect:Rect, fill:int = 0) -> None:
+    def __init__(self, id:list[int], rect:Rect, fill:int, texture:Texture) -> None:
         assert fill == 0 or fill == 1 or fill == 2, f"fill: {fill} not a valid input"
+        self.id = id
         self.value: int = fill
+        self.changed = False
         self.rect = rect
+        self.texture = texture
 
     def query(self, dx, dy):
         if self.rect.contains(dx, dy):
@@ -81,7 +93,25 @@ class Space:
         else:
             return None
         
-    def draw(self):
+    def draw(self, surface:pygame.Surface):
+        
+        if self.changed:
+            return
+        
+        def _scale_draw(surface:pygame.Surface, texture:pygame.Surface):
+            t = texture.copy()
+            pygame.transform.scale(t, (self.rect.width, self.rect.height))
+            surface.blit(t, (self.rect.x, self.rect.y))
+        
+        if self.value == 0:
+            pass
+        elif self.value == 1:
+            self.changed = True
+            _scale_draw(surface, self.texture.x_texture)
+        elif self.value == 2:
+            self.changed = True
+            _scale_draw(surface, self.texture.o_texture)
+
         # 0 = blank
         # 1 = x
         # 2 = o
