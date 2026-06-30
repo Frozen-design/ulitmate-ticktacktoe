@@ -32,8 +32,8 @@ class NonagonTree:
                     self.grid[j].append(Space(lower_id, Rect(x + i*width/3, y+j*height/3, width/3, height/3), 0, texture))
                 else:
                     self.grid[j].append(NonagonTree(lower_id, Rect(x + i*width/3, y+j*height/3, width/3, height/3), steps - 1, texture))
-
-        self.winner = 0
+        self.highlighted:bool = False
+        self.value = 0 # The winner of the grid.
 
     def access_by_id(self, id:list[int]):
         if len(id) == 0:
@@ -49,6 +49,23 @@ class NonagonTree:
         elif isinstance(g, self.__class__):
             return g.access_by_id(id_copy)
         
+    def set_highlight_by_id(self, id:list[int]) -> bool:
+        if len(id) == 0:
+            return False
+        assert len(id) <= self.steps + 1
+        id_copy = id.copy()
+        token = id_copy.pop(0)
+        if token == 9:
+            self.highlighted = True
+            return True
+        else:
+            j = token // 3
+            i = token % 3
+            g = self.grid[j][i]
+            if isinstance(g, self.__class__):
+                return g.set_highlight_by_id(id_copy)
+            else:
+                return False
 
     def query(self, dx, dy):
         if self.rect.contains(dx, dy):
@@ -70,6 +87,20 @@ class NonagonTree:
                 else:
                     temp_list += grid_slot.to_list()
         return temp_list
+
+    def _tictaktoe_board(self, surface, weight = 1):
+        x, y, w, h = self.rect.get_values()
+        for i in range(1, 3, 1):
+            line_v = ((x+(w*i)/3, y), (x+(w*i)/3, y+h))
+            line_h = ((x, y+(h*i)/3), (x+w, y+(h*i)/3))
+            for j in (line_v, line_h):
+                pygame.draw.line(surface, "black", *j, width = weight)
+        pass
+
+    def check_highlight(self, main_surface):
+        # execute every frame
+        #If self.highlighted: highlight else: unhighlight
+        pass
     
     def draw(self, surface:pygame.Surface):
         # Draw tictactoe grid
