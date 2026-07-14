@@ -50,22 +50,21 @@ class NonagonTree:
             return g.access_by_id(id_copy)
         
     def set_highlight_by_id(self, id:list[int]) -> bool:
-        if len(id) == 0:
-            return False
-        assert len(id) <= self.steps + 1
-        id_copy = id.copy()
-        token = id_copy.pop(0)
-        if token == 9:
-            self.highlighted = True
+        obj = self.access_by_id(id)
+        if obj != None:
+            if isinstance(obj, self.__class__):
+                obj.highlighted = True
+                return True
+        return False
+            
+    def mark_space(self, id:list[int], winner:int) -> bool:
+        space = self.access_by_id(id)
+        if isinstance(space, Space) and (winner == 1 or winner == 2):
+            space.value = winner
             return True
-        else:
-            j = token // 3
-            i = token % 3
-            g = self.grid[j][i]
-            if isinstance(g, self.__class__):
-                return g.set_highlight_by_id(id_copy)
-            else:
-                return False
+        elif isinstance(space, self.__class__):
+            pass
+        return False
 
     def query(self, dx, dy):
         if self.rect.contains(dx, dy):
@@ -88,7 +87,7 @@ class NonagonTree:
                     temp_list += grid_slot.to_list()
         return temp_list
 
-    def _tictaktoe_board(self, surface, weight = 1):
+    def _tictactoe_board(self, surface, weight = 1):
         x, y, w, h = self.rect.get_values()
         for i in range(1, 3, 1):
             line_v = ((x+(w*i)/3, y), (x+(w*i)/3, y+h))
@@ -96,6 +95,33 @@ class NonagonTree:
             for j in (line_v, line_h):
                 pygame.draw.line(surface, "black", *j, width = weight)
         pass
+
+    def _determine_winner(self):
+        def _add(l1:list[int], l2:list[int])->list[int]:
+            return [a + b for a, b in zip(l1, l2)]
+        
+        def _mult(l1:list[int], mag:int):
+            return [a*mag for a in l1]
+        
+        def _access(id:list[int]):
+            return self.grid[id[1]][id[0]]
+        
+        topleft, down, right, down_right, down_left = ([0, 0], [1, 0], [1, 0], [1, 1], [-1, 1])
+
+        top = [_add(topleft, _mult(right, i)) for i in range(3)]
+        mid = [_add(x, down) for x in top]
+        bottom = [_add(x, down) for x in mid]
+        horizontal = [top, mid, bottom]
+        vertical = [[i[j] for i in (top, mid, bottom)] for j in range(3)]
+        diag = [_add(topleft, _mult(down_right, i)) for i in range(3)]
+        diag_inv = [_add(top[2], _mult(down_left, i)) for i in range(3)]
+
+        awl:list[list[list[int]]] = []
+        for i in (horizontal, vertical):
+            awl += i
+        awl.append(diag)
+        awl.append(diag_inv)
+        #awl is a list of all potential winning lines on the board
 
     def check_highlight(self, main_surface):
         # execute every frame
