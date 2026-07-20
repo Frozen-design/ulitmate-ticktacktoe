@@ -33,7 +33,7 @@ class NonagonTree:
                 else:
                     self.grid[j].append(NonagonTree(lower_id, Rect(x + i*width/3, y+j*height/3, width/3, height/3), steps - 1, texture))
         self.highlighted:bool = False
-        self.value = 0 # The winner of the grid.
+        self.winner = 0 # The winner of the grid.
 
     def access_by_id(self, id:list[int]):
         if len(id) == 0:
@@ -60,7 +60,7 @@ class NonagonTree:
     def mark_space(self, id:list[int], winner:int) -> bool:
         space = self.access_by_id(id)
         if isinstance(space, Space) and (winner == 1 or winner == 2):
-            space.value = winner
+            space.winner = winner
             return True
         elif isinstance(space, self.__class__):
             pass
@@ -106,6 +106,8 @@ class NonagonTree:
         def _access(id:list[int]):
             return self.grid[id[1]][id[0]]
         
+        # Memory space be damned
+        
         topleft, down, right, down_right, down_left = ([0, 0], [1, 0], [1, 0], [1, 1], [-1, 1])
 
         top = [_add(topleft, _mult(right, i)) for i in range(3)]
@@ -116,12 +118,28 @@ class NonagonTree:
         diag = [_add(topleft, _mult(down_right, i)) for i in range(3)]
         diag_inv = [_add(top[2], _mult(down_left, i)) for i in range(3)]
 
-        awl:list[list[list[int]]] = []
-        for i in (horizontal, vertical):
-            awl += i
-        awl.append(diag)
-        awl.append(diag_inv)
+        horizontal_space = [[_access(j[i]) for i in range(3)] for j in horizontal]
+        vertical_space   = [[_access(j[i]) for i in range(3)] for j in vertical]
+        diag_space       = [_access(i) for i in diag]
+        diag_inv_space   = [_access(i) for i in diag_inv]
+
         #awl is a list of all potential winning lines on the board
+        awl:list[list["Space | NonagonTree"]] = []
+        for i in (horizontal_space, vertical_space):
+            awl += i
+        awl.append(diag_space)
+        awl.append(diag_inv_space)
+
+        winner_of_small_game = 0
+        for i in awl:
+            det_winner = i[0].winner
+            for j in i:
+                if det_winner == j.winner:
+                    pass
+                else:
+                    det_winner = 0
+            if winner_of_small_game == 0:
+                winner_of_small_game = det_winner
 
     def check_highlight(self, main_surface):
         # execute every frame
@@ -139,7 +157,7 @@ class Space:
     def __init__(self, id:list[int], rect:Rect, fill:int, texture:Texture) -> None:
         assert fill == 0 or fill == 1 or fill == 2, f"fill: {fill} not a valid input"
         self.id = id
-        self.value: int = fill
+        self.winner: int = fill
         self.changed = False
         self.rect = rect
         self.texture = texture
@@ -160,12 +178,12 @@ class Space:
             pygame.transform.scale(t, (self.rect.width, self.rect.height))
             surface.blit(t, (self.rect.x, self.rect.y))
         
-        if self.value == 0:
+        if self.winner == 0:
             pass
-        elif self.value == 1:
+        elif self.winner == 1:
             self.changed = True
             _scale_draw(surface, self.texture.x_texture)
-        elif self.value == 2:
+        elif self.winner == 2:
             self.changed = True
             _scale_draw(surface, self.texture.o_texture)
 
